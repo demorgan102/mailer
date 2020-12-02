@@ -45,6 +45,7 @@ const EmailModel = new Schema({
   to: { type: String, required: true },
   subject: { type: String, required: true },
   text: { type: String, required: true },
+  html: { type: String, required: true },
   sent: { type: Boolean, default: false },
   verify: { type: String, default: config.randomkey() },
   date: { type: Date, default: Date.now }
@@ -62,6 +63,10 @@ cron.schedule('* * * * *', () => {
         subject: doc.subject,
         text: doc.text
       };
+
+      if(!config.isEmpty(doc.html)){
+        mailOptions.html = doc.html;
+      }
 
       transporter.verify(function(error, success) {
         if (error) {
@@ -123,6 +128,21 @@ app.post('/send-mail', function (req, res) {
     to: `${name} <${req.body.to}>`,
     subject: `${req.body.subject}`,
     text: `${req.body.text}`,
+    html: `
+    <!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Errandspay - Support</title>
+        <style>
+        </style>
+      </head>
+      <body class="">
+        ${req.body.text}
+      </body>
+    </html>
+`,
     verify: key
   });
 
@@ -130,7 +150,9 @@ app.post('/send-mail', function (req, res) {
     if (!err) console.log("Success!");
   });
 
-  res.send("Sending email...");
+  res.status(200).json({
+    verify: key
+  });
 })
 
 
@@ -141,17 +163,38 @@ app.post('/create-user', function (req, res) {
   const name = req.body.name;
   const key = config.randomkey();
   const email = new EmailData({
-    from: `Company Name <${process.env.MAIL_USER}>`,
+    from: `Errandspay Support <${process.env.MAIL_USER}>`,
     to: `${name} <${req.body.to}>`,
-    subject: `Hi ${name}, please verify your Company account`,
+    subject: `Hi ${name}, please verify your Errandspay account`,
     text: `Hi ${name},\n
-    Thanks for joining Company Name! Please confirm your email address by clicking on the link below.
+    Thanks for joining Errandspay! Please confirm your email address by clicking on the link below.
     We'll communicate with you from time to time via email so it's important that we have an up-to-date email address on file.
-    https://signup.company.com/activate/${key}
-    If you did not sign up for an Company company please disregard this email.
-    Happy Learning,
-    Company Support
+    https://errandspay.com/register/activate/${key}
+    If you did not sign up for an Errandspay account please disregard this email.
+    Happy Earning,
+    Errandspay Support
     `,
+    html: `
+    <!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Errandspay - Support</title>
+        <style>
+        </style>
+      </head>
+      <body class="">
+        <p>Hi ${name},</p>
+    <p>Thanks for joining Errandspay! Please confirm your email address by clicking on the link below.
+    We'll communicate with you from time to time via email so it's important that we have an up-to-date email address on file.</p>
+    <a href="https://errandspay.com/register/activate/${key}">Verify you account</a>
+    <p>If you did not sign up for an Errandspay account please disregard this email.
+    Happy Earning,
+    Errandspay Support</p>
+      </body>
+    </html>
+`,
     verify: key
   });
 
@@ -159,7 +202,9 @@ app.post('/create-user', function (req, res) {
     if (!err) console.log("Success!");
   });
 
-  res.send("Sending email...");
+  res.status(200).json({
+    verify: key
+  });
 });
 
 app.use(function(req, res, next){
