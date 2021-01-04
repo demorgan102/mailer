@@ -207,7 +207,7 @@ app.post('/create-user', function (req, res) {
   });
 });
 
-app.post('/test-mail', function (req, res) {
+app.get('/test-mail', function (req, res) {
   const key = config.randomkey();
   const email = new EmailData({
     from: `Errandspay CEO <no-reply@errandspay.com>`,
@@ -237,7 +237,8 @@ app.post('/test-mail', function (req, res) {
   });
 
   res.status(200).json({
-    verify: key
+    verify: key,
+    message: "Sending mail"
   });
 })
 
