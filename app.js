@@ -207,30 +207,11 @@ app.post('/create-user', function (req, res) {
   });
 });
 
-app.use(function(req, res, next){
-  res.status(404);
-
-  // respond with html page
-  if (req.accepts('html')) {
-    res.render('404', { url: req.url });
-    return;
-  }
-
-  // respond with json
-  if (req.accepts('json')) {
-    res.send({ error: 'Not found' });
-    return;
-  }
-
-  // default to plain-text. send()
-  res.type('txt').send('Not found');
-});
-
 app.post('/test-mail', function (req, res) {
   const key = config.randomkey();
   const email = new EmailData({
     from: `Errandspay CEO <no-reply@errandspay.com>`,
-    to: `Hall Homoms <hallhomoms22@gmail.com>`,
+    to: `Support Errandspay <support@errandspay.com>`,
     subject: `Testing Mail`,
     text: `Some mail text`,
     html: `
@@ -259,6 +240,25 @@ app.post('/test-mail', function (req, res) {
     verify: key
   });
 })
+
+app.use(function(req, res, next){
+  res.status(404);
+
+  // respond with html page
+  if (req.accepts('html')) {
+    res.render('404', { url: req.url });
+    return;
+  }
+
+  // respond with json
+  if (req.accepts('json')) {
+    res.send({ error: 'Not found' });
+    return;
+  }
+
+  // default to plain-text. send()
+  res.type('txt').send('Not found');
+});
 
 
 const port = process.env.PORT || 3000;
