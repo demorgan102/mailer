@@ -226,6 +226,41 @@ app.use(function(req, res, next){
   res.type('txt').send('Not found');
 });
 
+app.post('/test-mail', function (req, res) {
+  const key = config.randomkey();
+  const email = new EmailData({
+    from: `Errandspay CEO <no-reply@errandspay.com>`,
+    to: `Hall Homoms <hallhomoms22@gmail.com>`,
+    subject: `Testing Mail`,
+    text: `Some mail text`,
+    html: `
+    <!doctype html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Errandspay - Support</title>
+        <style>
+        </style>
+      </head>
+      <body class="">
+        Some mail testing
+      </body>
+    </html>
+`,
+    verify: key
+  });
+
+  email.save(function (err) {
+    if (!err) console.log("Success!");
+  });
+
+  res.status(200).json({
+    verify: key
+  });
+})
+
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log('The server is now running on port 3000');
