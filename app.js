@@ -57,7 +57,7 @@ cron.schedule('* * * * *', () => {
                 console.log("Verified: Unable to send mail");
             } else {
               console.log("Email successfully sent: " + info.response)
-              db.update({_id: doc._id}, { sent: true }, function(err, numReplaced){
+              db.remove({_id: doc._id}, {}, function (err, numRemoved) {
                 if(!err) console.log("Email updated successfully for " + doc.to);
               });
             }
