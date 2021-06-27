@@ -10,9 +10,8 @@ if(!environment || environment == "development"){
   }
 }
 
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-const ObjectId = Schema.ObjectId;
+const Datastore = require('nedb'),
+db = new Datastore({ filename: 'cluster0/db/errands.db', autoload: true });
 
 const nodemailer = require('nodemailer');
 const config = require('./config.js');
@@ -33,29 +32,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
 app.use(bodyParser.json());
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useFindAndModify: false,
-  useCreateIndex: true
-});
-
-const EmailModel = new Schema({
-  from: { type: String, default: `FLS Support <${process.env.MAIL_USER}>` },
-  to: { type: String, required: true },
-  subject: { type: String, required: true },
-  text: { type: String, required: true },
-  html: { type: String, required: true },
-  sent: { type: Boolean, default: false },
-  verify: { type: String, default: config.randomkey() },
-  date: { type: Date, default: Date.now }
-});
-
-const EmailData = mongoose.model('Email', EmailModel);
-
 cron.schedule('* * * * *', () => {
   const now = new Date().toLocaleDateString();
-  EmailData.findOne({ sent: false }, function (err, doc) {
+  db.findOne({ sent: false }, function (err, doc) {
     if(!err && !config.isEmpty(doc)){
       const mailOptions = {
         from: doc.from,
@@ -78,7 +57,7 @@ cron.schedule('* * * * *', () => {
                 console.log("Verified: Unable to send mail");
             } else {
               console.log("Email successfully sent: " + info.response)
-              EmailData.updateOne({_id: doc._id}, { sent: true }, function(err, info){
+              db.update({_id: doc._id}, { sent: true }, function(err, numReplaced){
                 if(!err) console.log("Email updated successfully for " + doc.to);
               });
             }
@@ -89,6 +68,7 @@ cron.schedule('* * * * *', () => {
       console.log("No mails to send at " + now);
     }
   });
+
 });
 
 app.get('/', function (req, res) {
@@ -123,7 +103,7 @@ then use the account password
 app.post('/send-mail', function (req, res) {
   const name = req.body.name;
   const key = req.body.key || config.randomkey();
-  const email = new EmailData({
+  const email = {
     from: `Company Support <${req.body.from}>`,
     to: `${name} <${req.body.to}>`,
     subject: `${req.body.subject}`,
@@ -141,14 +121,22 @@ app.post('/send-mail', function (req, res) {
       <body class="">
         ${req.body.text}
       </body>
-    </html>
-`,
-    verify: key
+    </html>`,
+    verify: key,
+    sent: false
+  };
+
+  let isDatabaseError = false;
+  db.insert(email, function (err, newDoc) { 
+    if (err){
+      isDatabaseError = true;
+    }
   });
 
-  email.save(function (err) {
-    if (!err) console.log("Success!");
-  });
+  if(isDatabaseError){
+    res.send({ error: 'A Database error occurred!' });
+    return;
+  }
 
   res.status(200).json({
     verify: key
@@ -162,7 +150,7 @@ app.post('/send-mail', function (req, res) {
 app.post('/create-user', function (req, res) {
   const name = req.body.name;
   const key = config.randomkey();
-  const email = new EmailData({
+  const email = {
     from: `Errandspay Support <${process.env.MAIL_USER}>`,
     to: `${name} <${req.body.to}>`,
     subject: `Hi ${name}, please verify your Errandspay account`,
@@ -193,14 +181,22 @@ app.post('/create-user', function (req, res) {
     Happy Earning,
     Errandspay Support</p>
       </body>
-    </html>
-`,
-    verify: key
+    </html>`,
+    verify: key,
+    sent: false
+  };
+
+  let isDatabaseError = false;
+  db.insert(email, function (err, newDoc) { 
+    if (err){
+      isDatabaseError = true;
+    }
   });
 
-  email.save(function (err) {
-    if (!err) console.log("Success!");
-  });
+  if(isDatabaseError){
+    res.send({ error: 'A Database error occurred!' });
+    return;
+  }
 
   res.status(200).json({
     verify: key
@@ -209,7 +205,7 @@ app.post('/create-user', function (req, res) {
 
 app.get('/test-mail', function (req, res) {
   const key = config.randomkey();
-  const email = new EmailData({
+  const email = {
     from: `Errandspay CEO <no-reply@errandspay.com>`,
     to: `Support Errandspay <support@errandspay.com>`,
     subject: `Testing Mail`,
@@ -227,14 +223,22 @@ app.get('/test-mail', function (req, res) {
       <body class="">
         Some mail testing
       </body>
-    </html>
-`,
-    verify: key
+    </html>`,
+    verify: key,
+    sent: false
+  };
+
+  let isDatabaseError = false;
+  db.insert(email, function (err, newDoc) { 
+    if (err){
+      isDatabaseError = true;
+    }
   });
 
-  email.save(function (err) {
-    if (!err) console.log("Success!");
-  });
+  if(isDatabaseError){
+    res.send({ error: 'A Database error occurred!' });
+    return;
+  }
 
   res.status(200).json({
     verify: key,
