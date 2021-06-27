@@ -10,8 +10,10 @@ if(!environment || environment == "development"){
   }
 }
 
-const Datastore = require('nedb'),
-db = new Datastore({ filename: 'cluster0/db/errands.db', autoload: true });
+const Datastore = require('nedb');
+const db = {};
+db.mails = new Datastore({ filename: 'cluster0/db/errands.db', autoload: true });
+db.users = new Datastore({ filename: 'cluster0/db/users.db', autoload: true });
 
 const nodemailer = require('nodemailer');
 const config = require('./config.js');
@@ -34,7 +36,7 @@ app.use(bodyParser.json());
 
 cron.schedule('* * * * *', () => {
   const now = new Date().toLocaleDateString();
-  db.findOne({ sent: false }, function (err, doc) {
+  db.mails.findOne({ sent: false }, function (err, doc) {
     if(!err && !config.isEmpty(doc)){
       const mailOptions = {
         from: doc.from,
@@ -57,7 +59,12 @@ cron.schedule('* * * * *', () => {
                 console.log("Verified: Unable to send mail");
             } else {
               console.log("Email successfully sent: " + info.response)
-              db.remove({_id: doc._id}, {}, function (err, numRemoved) {
+              db.users.insert({ email: doc.to }, function (err, newDoc) { 
+                if (err){
+                  isDatabaseError = true;
+                }
+              });
+              db.mails.remove({_id: doc._id}, {}, function (err, numRemoved) {
                 if(!err) console.log("Email updated successfully for " + doc.to);
               });
             }
@@ -127,7 +134,7 @@ app.post('/send-mail', function (req, res) {
   };
 
   let isDatabaseError = false;
-  db.insert(email, function (err, newDoc) { 
+  db.mails.insert(email, function (err, newDoc) { 
     if (err){
       isDatabaseError = true;
     }
@@ -187,7 +194,7 @@ app.post('/create-user', function (req, res) {
   };
 
   let isDatabaseError = false;
-  db.insert(email, function (err, newDoc) { 
+  db.mails.insert(email, function (err, newDoc) { 
     if (err){
       isDatabaseError = true;
     }
@@ -229,7 +236,7 @@ app.get('/test-mail', function (req, res) {
   };
 
   let isDatabaseError = false;
-  db.insert(email, function (err, newDoc) { 
+  db.mails.insert(email, function (err, newDoc) { 
     if (err){
       isDatabaseError = true;
     }
